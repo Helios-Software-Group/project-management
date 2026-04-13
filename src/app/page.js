@@ -10,6 +10,8 @@ import "./globals.css";
 const RISK_LABELS = { high: "High", med: "Medium", low: "Low" };
 const TICKETS_KEY = "mvp-tickets";
 const STAGES_KEY = "parish-stages";
+const ADMIN_KEY = "admin-unlocked";
+const ADMIN_CODE = "cott2026";
 
 // Reverse lookup: stage number → stage name
 const STAGE_NAMES = Object.entries(STAGE_MAP).reduce((acc, [name, num]) => {
@@ -23,10 +25,15 @@ export default function Home() {
   const [stageOverrides, setStageOverrides] = useState({});
   const [data, setData] = useState(getDummyData());
   const [dataSource, setDataSource] = useState("local");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const { summary } = data;
 
   // Load from localStorage + try Notion
   useEffect(() => {
+    try {
+      if (localStorage.getItem(ADMIN_KEY) === "true") setIsAdmin(true);
+    } catch { /* ignore */ }
     try {
       const saved = JSON.parse(localStorage.getItem(TICKETS_KEY));
       if (saved) setTickets(saved);
@@ -115,6 +122,26 @@ export default function Home() {
           <span className={`updated ${dataSource === "notion" ? "updated-live" : ""}`}>
             {dataSource === "notion" ? "Live from Notion" : "Local data"}
           </span>
+          <AdminToggle
+            isAdmin={isAdmin}
+            showLogin={showLogin}
+            onToggle={() => {
+              if (isAdmin) {
+                setIsAdmin(false);
+                localStorage.removeItem(ADMIN_KEY);
+              } else {
+                setShowLogin(!showLogin);
+              }
+            }}
+            onLogin={(code) => {
+              if (code === ADMIN_CODE) {
+                setIsAdmin(true);
+                setShowLogin(false);
+                localStorage.setItem(ADMIN_KEY, "true");
+              }
+            }}
+            onCancel={() => setShowLogin(false)}
+          />
         </div>
         {view === "parish" ? (
           <p className="subtitle">
@@ -132,7 +159,7 @@ export default function Home() {
 
       {view === "parish" ? (
         <div role="tabpanel" id="panel-rollout" aria-labelledby="tab-rollout">
-          <ParishView data={data} stageOverrides={stageOverrides} onStageChange={setParishStage} />
+          <ParishView data={data} stageOverrides={stageOverrides} onStageChange={setParishStage} isAdmin={isAdmin} />
         </div>
       ) : (
         <div role="tabpanel" id="panel-mvp" aria-labelledby="tab-mvp">
@@ -141,6 +168,7 @@ export default function Home() {
             completeTicket={completeTicket}
             getActiveTickets={getActiveTickets}
             getCompletedCount={getCompletedCount}
+            isAdmin={isAdmin}
           />
         </div>
       )}
@@ -169,9 +197,68 @@ export default function Home() {
   );
 }
 
+/* ─── Admin Toggle ─── */
+
+function AdminToggle({ isAdmin, showLogin, onToggle, onLogin, onCancel }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = () => {
+    onLogin(code);
+    if (code !== ADMIN_CODE) {
+      setError(true);
+      setTimeout(() => setError(false), 1500);
+    }
+    setCode("");
+  };
+
+  return (
+    <div className="admin-toggle">
+      <button
+        className={`admin-btn ${isAdmin ? "admin-btn-active" : ""}`}
+        onClick={onToggle}
+        aria-label={isAdmin ? "Lock editing" : "Unlock editing"}
+      >
+        {isAdmin ? (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+            <path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+            <path d="M4.5 6V4.5a2.5 2.5 0 015 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        )}
+        {isAdmin ? "Admin" : "Viewer"}
+      </button>
+      {showLogin && !isAdmin && (
+        <div className="admin-login">
+          <input
+            className={`admin-code-input ${error ? "admin-code-error" : ""}`}
+            type="password"
+            placeholder="Passcode"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSubmit();
+              if (e.key === "Escape") onCancel();
+            }}
+            ref={(el) => el?.focus()}
+            aria-label="Admin passcode"
+          />
+          <button className="admin-code-go" onClick={handleSubmit}>
+            Go
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Parish Rollout View ─── */
 
-function ParishView({ data, stageOverrides, onStageChange }) {
+function ParishView({ data, stageOverrides, onStageChange, isAdmin }) {
   const { summary, parishes: rawParishes } = data;
   const [weekFilter, setWeekFilter] = useState(null);
 
@@ -338,7 +425,7 @@ function ParishView({ data, stageOverrides, onStageChange }) {
                           else if (idx < stageNum) cls = "seg-done";
                           else if (idx === stageNum) cls = "seg-active";
 
-                          return (
+                          return isAdmin ? (
                             <button
                               key={stage.key}
                               className={`bar-seg bar-seg-btn ${cls}`}
@@ -346,6 +433,13 @@ function ParishView({ data, stageOverrides, onStageChange }) {
                               title={`Set ${p.name} to ${stage.label}`}
                               aria-label={`Set ${p.name} to stage ${stage.label}`}
                               onClick={() => onStageChange(p.name, idx === stageNum ? idx - 1 : idx)}
+                            />
+                          ) : (
+                            <div
+                              key={stage.key}
+                              className={`bar-seg ${cls}`}
+                              style={{ background: stage.color }}
+                              title={stage.label}
                             />
                           );
                         })}
@@ -428,7 +522,7 @@ function StageGuide() {
 
 const HURDLE_KEY = "mvp-hurdle";
 
-function MvpView({ addTicket, completeTicket, getActiveTickets, getCompletedCount }) {
+function MvpView({ addTicket, completeTicket, getActiveTickets, getCompletedCount, isAdmin }) {
   const [hurdle, setHurdle] = useState("Verdict CMS API");
 
   useEffect(() => {
@@ -448,13 +542,17 @@ function MvpView({ addTicket, completeTicket, getActiveTickets, getCompletedCoun
       <div className="kpi-row">
         <div className="kpi kpi-blocker-card">
           <span className="kpi-label">Biggest hurdle</span>
-          <input
-            className="hurdle-input"
-            type="text"
-            value={hurdle}
-            onChange={(e) => saveHurdle(e.target.value)}
-            aria-label="Biggest hurdle"
-          />
+          {isAdmin ? (
+            <input
+              className="hurdle-input"
+              type="text"
+              value={hurdle}
+              onChange={(e) => saveHurdle(e.target.value)}
+              aria-label="Biggest hurdle"
+            />
+          ) : (
+            <span className="kpi-value kpi-blocked">{hurdle}</span>
+          )}
         </div>
       </div>
 
@@ -500,10 +598,11 @@ function MvpView({ addTicket, completeTicket, getActiveTickets, getCompletedCoun
                     activeTickets={getActiveTickets(cat.key, i)}
                     completedCount={getCompletedCount(cat.key, i)}
                     onComplete={completeTicket}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </ul>
-              <CardAddTicket catKey={cat.key} categories={cat} onAdd={addTicket} />
+              {isAdmin && <CardAddTicket catKey={cat.key} categories={cat} onAdd={addTicket} />}
             </div>
           );
         })}
@@ -514,7 +613,7 @@ function MvpView({ addTicket, completeTicket, getActiveTickets, getCompletedCoun
 
 /* ─── Feature Row with Tickets ─── */
 
-function FeatureRow({ feature, catKey, featureIdx, activeTickets, completedCount, onComplete }) {
+function FeatureRow({ feature, catKey, featureIdx, activeTickets, completedCount, onComplete, isAdmin }) {
   return (
     <li className="mvp-feature-group">
       <div className="mvp-feature">
@@ -528,15 +627,19 @@ function FeatureRow({ feature, catKey, featureIdx, activeTickets, completedCount
 
       {activeTickets.map((t) => (
         <div key={t.id} className="mvp-ticket">
-          <button
-            className="mvp-ticket-check"
-            onClick={() => onComplete(catKey, featureIdx, t.id)}
-            aria-label={`Mark "${t.description}" as done`}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-          </button>
+          {isAdmin ? (
+            <button
+              className="mvp-ticket-check"
+              onClick={() => onComplete(catKey, featureIdx, t.id)}
+              aria-label={`Mark "${t.description}" as done`}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </button>
+          ) : (
+            <span className="mvp-ticket-dot" aria-hidden="true" />
+          )}
           <span className="mvp-ticket-desc">{t.description}</span>
         </div>
       ))}

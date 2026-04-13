@@ -93,6 +93,122 @@ h1 {
   color: var(--accent-green);
 }
 
+/* Admin toggle */
+.admin-toggle {
+  position: relative;
+  margin-left: auto;
+}
+
+.admin-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.admin-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.admin-btn:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+.admin-btn-active {
+  border-color: rgba(91, 141, 239, 0.4);
+  color: var(--accent-blue);
+  background: rgba(91, 141, 239, 0.08);
+}
+
+.admin-btn-active:hover {
+  background: rgba(91, 141, 239, 0.12);
+  color: var(--accent-blue);
+}
+
+.admin-login {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.admin-code-input {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.5rem;
+  width: 120px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-code-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.admin-code-error {
+  border-color: var(--accent-red) !important;
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.admin-code-go {
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.35rem 0.6rem;
+  border: none;
+  border-radius: 5px;
+  background: var(--accent-blue);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.admin-code-go:hover {
+  opacity: 0.85;
+}
+
+.admin-code-go:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* Viewer ticket dot (replaces checkmark) */
+.mvp-ticket-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  flex-shrink: 0;
+}
+
 .subtitle {
   font-size: 0.85rem;
   color: var(--text-secondary);
